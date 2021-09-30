@@ -102,6 +102,8 @@ fn main() {
         println!("cargo:rerun-if-changed=proto/vector.proto");
         println!("cargo:rerun-if-changed=proto/dnstap.proto");
         println!("cargo:rerun-if-changed=proto/ddsketch.proto");
+        println!("cargo:rerun-if-changed=proto/span.proto");
+        println!("cargo:rerun-if-changed=proto/trace_payload.proto");
 
         let mut prost_build = prost_build::Config::new();
         prost_build.btree_map(&["."]);
@@ -114,6 +116,7 @@ fn main() {
                     "proto/vector.proto",
                     "proto/dnstap.proto",
                     "proto/ddsketch.proto",
+                    "proto/trace_payload.proto",
                 ],
                 &["proto/", "lib/vector-core/proto/"],
             )
