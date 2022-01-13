@@ -10,5 +10,6 @@ test = []
 
 [dependencies]
 serde_json = { version = "1.0.68", default-features = false, features = ["std", "raw_value"] }
+smallvec = { version = "1", features = ["const_generics", "union"] }
 metrics = { version = "0.17.0", default-features = false, features = ["std"] }
 tracing = { version = "0.1.29", default-features = false }

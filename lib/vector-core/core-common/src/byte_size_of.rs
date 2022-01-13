@@ -4,6 +4,7 @@ use std::{
 };
 
 use serde_json::{value::RawValue, Value};
+use smallvec::SmallVec;
 
 pub trait ByteSizeOf {
     /// Returns the in-memory size of this type
@@ -116,6 +117,22 @@ impl ByteSizeOf for Value {
             Value::String(s) => s.len(),
             Value::Array(a) => a.size_of(),
             Value::Object(o) => o.iter().map(|(k, v)| k.size_of() + v.size_of()).sum(),
+        }
+    }
+}
+
+impl<T: ByteSizeOf, const N: usize> ByteSizeOf for [T; N] {
+    fn allocated_bytes(&self) -> usize {
+        self.iter().map(ByteSizeOf::allocated_bytes).sum()
+    }
+}
+
+impl<T: ByteSizeOf, const N: usize> ByteSizeOf for SmallVec<[T; N]> {
+    fn allocated_bytes(&self) -> usize {
+        if self.len() <= N {
+            self.iter().map(ByteSizeOf::allocated_bytes).sum()
+        } else {
+            self.iter().map(ByteSizeOf::size_of).sum()
         }
     }
 }

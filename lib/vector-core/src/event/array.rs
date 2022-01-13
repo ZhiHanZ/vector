@@ -2,7 +2,9 @@
 //! This module contains the definitions and wrapper types for handling
 //! arrays of type `Event`, in the various forms they may appear.
 
-use std::{iter, vec};
+use std::iter;
+
+use smallvec::{smallvec_inline, SmallVec};
 
 use super::{Event, LogEvent, Metric};
 use crate::ByteSizeOf;
@@ -76,10 +78,10 @@ impl EventContainer for Metric {
 }
 
 /// The type alias for an array of `LogEvent` elements.
-pub type LogArray = Vec<LogEvent>;
+pub type LogArray = SmallVec<[LogEvent; 1]>;
 
 impl EventContainer for LogArray {
-    type IntoIter = iter::Map<vec::IntoIter<LogEvent>, fn(LogEvent) -> Event>;
+    type IntoIter = iter::Map<smallvec::IntoIter<[LogEvent; 1]>, fn(LogEvent) -> Event>;
 
     fn len(&self) -> usize {
         self.len()
@@ -91,10 +93,10 @@ impl EventContainer for LogArray {
 }
 
 /// The type alias for an array of `Metric` elements.
-pub type MetricArray = Vec<Metric>;
+pub type MetricArray = SmallVec<[Metric; 1]>;
 
 impl EventContainer for MetricArray {
-    type IntoIter = iter::Map<vec::IntoIter<Metric>, fn(Metric) -> Event>;
+    type IntoIter = iter::Map<smallvec::IntoIter<[Metric; 1]>, fn(Metric) -> Event>;
 
     fn len(&self) -> usize {
         self.len()
@@ -133,8 +135,8 @@ impl EventArray {
 impl From<Event> for EventArray {
     fn from(event: Event) -> Self {
         match event {
-            Event::Log(log) => Self::Logs(vec![log]),
-            Event::Metric(metric) => Self::Metrics(vec![metric]),
+            Event::Log(log) => Self::Logs(smallvec_inline![log]),
+            Event::Metric(metric) => Self::Metrics(smallvec_inline![metric]),
         }
     }
 }
@@ -182,9 +184,9 @@ impl EventContainer for EventArray {
 #[derive(Debug)]
 pub enum EventArrayIntoIter {
     /// An iterator over type `LogEvent`.
-    Logs(vec::IntoIter<LogEvent>),
+    Logs(smallvec::IntoIter<[LogEvent; 1]>),
     /// An iterator over type `Metric`.
-    Metrics(vec::IntoIter<Metric>),
+    Metrics(smallvec::IntoIter<[Metric; 1]>),
 }
 
 impl Iterator for EventArrayIntoIter {
