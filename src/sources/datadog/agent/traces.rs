@@ -1,10 +1,10 @@
 use crate::{
     event::{Event, LogEvent, Value},
     internal_events::EventsReceived,
-    sources::datadog::agent::{handle_request, ApiKeyQueryParams, DatadogAgentSource},
+    sources::datadog::agent::{self, handle_request, ApiKeyQueryParams, DatadogAgentSource},
     sources::util::ErrorMessage,
     vector_core::ByteSizeOf,
-    Pipeline,
+    SourceSender,
 };
 use bytes::Bytes;
 use chrono::{TimeZone, Utc};
@@ -21,10 +21,11 @@ mod dd_proto {
 
 pub(crate) fn build_warp_filter(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
-    build_trace_filter(acknowledgements, out, source)
+    build_trace_filter(acknowledgements, multiple_outputs, out, source)
         .or(build_stats_filter())
         .unify()
         .boxed()
@@ -32,7 +33,8 @@ pub(crate) fn build_warp_filter(
 
 fn build_trace_filter(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
     warp::post()
@@ -72,7 +74,11 @@ fn build_trace_filter(
                             )
                         })
                     });
-                handle_request(events, acknowledgements, out.clone())
+                if multiple_outputs {
+                    handle_request(events, acknowledgements, out.clone(), Some(agent::LOGS))
+                } else {
+                    handle_request(events, acknowledgements, out.clone(), None)
+                }
             },
         )
         .boxed()

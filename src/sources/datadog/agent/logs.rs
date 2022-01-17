@@ -1,10 +1,10 @@
 use crate::{
     event::Event,
     internal_events::EventsReceived,
-    sources::datadog::agent::{handle_request, ApiKeyQueryParams, DatadogAgentSource},
+    sources::datadog::agent::{self, handle_request, ApiKeyQueryParams, DatadogAgentSource},
     sources::util::{ErrorMessage, StreamDecodingError},
     vector_core::ByteSizeOf,
-    Pipeline,
+    SourceSender,
 };
 use bytes::{BufMut, Bytes, BytesMut};
 use chrono::Utc;
@@ -16,7 +16,8 @@ use warp::{filters::BoxedFilter, path, path::FullPath, reply::Response, Filter};
 
 pub(crate) fn build_warp_filter(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
     warp::post()
@@ -46,7 +47,12 @@ pub(crate) fn build_warp_filter(
                             &source,
                         )
                     });
-                handle_request(events, acknowledgements, out.clone())
+
+                if multiple_outputs {
+                    handle_request(events, acknowledgements, out.clone(), Some(agent::LOGS))
+                } else {
+                    handle_request(events, acknowledgements, out.clone(), None)
+                }
             },
         )
         .boxed()

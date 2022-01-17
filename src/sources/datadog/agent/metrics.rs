@@ -3,10 +3,10 @@ use crate::{
     config::log_schema,
     event::{metric::Metric, metric::MetricValue, Event, MetricKind},
     internal_events::EventsReceived,
-    sources::datadog::agent::{handle_request, ApiKeyQueryParams, DatadogAgentSource},
+    sources::datadog::agent::{self, handle_request, ApiKeyQueryParams, DatadogAgentSource},
     sources::util::ErrorMessage,
     vector_core::ByteSizeOf,
-    Pipeline,
+    SourceSender,
 };
 use bytes::Bytes;
 use chrono::{TimeZone, Utc};
@@ -25,11 +25,17 @@ pub(crate) struct DatadogSeriesRequest {
 
 pub(crate) fn build_warp_filter(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
-    let sketches_service = sketches_service(acknowledgements, out.clone(), source.clone());
-    let series_v1_service = series_v1_service(acknowledgements, out, source);
+    let sketches_service = sketches_service(
+        acknowledgements,
+        multiple_outputs,
+        out.clone(),
+        source.clone(),
+    );
+    let series_v1_service = series_v1_service(acknowledgements, multiple_outputs, out, source);
     let series_v2_service = series_v2_service();
     sketches_service
         .or(series_v1_service)
@@ -41,7 +47,8 @@ pub(crate) fn build_warp_filter(
 
 fn sketches_service(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
     warp::post()
@@ -69,7 +76,11 @@ fn sketches_service(
                             ),
                         )
                     });
-                handle_request(events, acknowledgements, out.clone())
+                if multiple_outputs {
+                    handle_request(events, acknowledgements, out.clone(), Some(agent::METRICS))
+                } else {
+                    handle_request(events, acknowledgements, out.clone(), None)
+                }
             },
         )
         .boxed()
@@ -77,7 +88,8 @@ fn sketches_service(
 
 fn series_v1_service(
     acknowledgements: bool,
-    out: Pipeline,
+    multiple_outputs: bool,
+    out: SourceSender,
     source: DatadogAgentSource,
 ) -> BoxedFilter<(Response,)> {
     warp::post()
@@ -105,7 +117,16 @@ fn series_v1_service(
                             ),
                         )
                     });
-                handle_request(events, acknowledgements, out.clone())
+                if multiple_outputs {
+                    handle_request(
+                        events,
+                        acknowledgements,
+                        out.clone(),
+                        Some(agent::METRICS),
+                    )
+                } else {
+                    handle_request(events, acknowledgements, out.clone(), None)
+                }
             },
         )
         .boxed()
