@@ -118,12 +118,7 @@ fn series_v1_service(
                         )
                     });
                 if multiple_outputs {
-                    handle_request(
-                        events,
-                        acknowledgements,
-                        out.clone(),
-                        Some(agent::METRICS),
-                    )
+                    handle_request(events, acknowledgements, out.clone(), Some(agent::METRICS))
                 } else {
                     handle_request(events, acknowledgements, out.clone(), None)
                 }

@@ -9,7 +9,7 @@ pub mod traces;
 
 use bytes::{Buf, Bytes};
 use flate2::read::{MultiGzDecoder, ZlibDecoder};
-use futures::{FutureExt, SinkExt, StreamExt};
+use futures::FutureExt;
 use http::StatusCode;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -30,10 +30,7 @@ use crate::{
     event::Event,
     internal_events::{HttpBytesReceived, HttpDecompressError},
     serde::{bool_or_struct, default_decoding, default_framing_message_based},
-    sources::{
-        self,
-        util::ErrorMessage,
-    },
+    sources::{self, util::ErrorMessage},
     tls::{MaybeTlsSettings, TlsConfig},
     SourceSender,
 };

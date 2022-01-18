@@ -108,7 +108,7 @@ fn decode_dd_trace_payload(
     let trace_events: Vec<Event> = decoded_payload
         .traces
         .iter()
-        .map(|dd_traces| into_event(dd_traces, env.clone(), hostname.clone(), source))
+        .map(|dd_traces| into_logevent(dd_traces, env.clone(), hostname.clone(), source))
         //... and each APM event is also map into its own event
         .chain(decoded_payload.transactions.iter().map(|s| {
             let mut log_event = LogEvent::from(convert_span(s));
@@ -129,7 +129,7 @@ fn decode_dd_trace_payload(
             if let Some(lang) = lang {
                 log_event.insert("language", lang.clone());
             }
-            log_event.into()
+            Event::Trace(log_event)
         })
         .collect();
 
@@ -141,7 +141,7 @@ fn decode_dd_trace_payload(
     Ok(trace_events)
 }
 
-fn into_event(
+fn into_logevent(
     dd_trace: &dd_proto::ApiTrace,
     env: String,
     hostname: String,
